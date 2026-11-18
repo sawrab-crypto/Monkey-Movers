@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Monkey Movers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow column built for a phone held at the course; sticky tabs, date bar on top, cards below. */
+:root{
+  --bg:#F3F6F8; --surface:#FFFFFF; --ink:#12202B; --muted:#586774; --line:#D9E1E7;
+  --accent:#0F766E; --on-accent:#FFFFFF; --accent-soft:#DDF1EE;
+  --k5:#A93F08; --k5-bg:#FDEADB;
+  --k3:#1D4FBF; --k3-bg:#E3EBFD;
+  --danger:#B42318; --warn-bg:#FFF4D6; --warn-ink:#7A4B00;
+  --font-display:'Space Grotesk','Inter',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151A; --surface:#172129; --ink:#E6EDF2; --muted:#9AABB8; --line:#2A3945;
+    --accent:#3CC3B3; --on-accent:#06231F; --accent-soft:#15332F;
+    --k5:#FFA66E; --k5-bg:#3A2415;
+    --k3:#8DB1FF; --k3-bg:#18284B;
+    --danger:#FF8A7E; --warn-bg:#3A2E0E; --warn-ink:#F3CD73;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151A; --surface:#172129; --ink:#E6EDF2; --muted:#9AABB8; --line:#2A3945;
+  --accent:#3CC3B3; --on-accent:#06231F; --accent-soft:#15332F;
+  --k5:#FFA66E; --k5-bg:#3A2415;
+  --k3:#8DB1FF; --k3-bg:#18284B;
+  --danger:#FF8A7E; --warn-bg:#3A2E0E; --warn-ink:#F3CD73;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font:16px/1.5 var(--font-body);
+  padding-block:20px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:1.75rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.25rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.top p{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+.status{font-size:.8rem;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;min-height:32px}
+.status[data-s="err"]{color:var(--danger);border-color:var(--danger);cursor:pointer}
+.status[data-s="saved"]::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px}
+.banner{background:var(--warn-bg);color:var(--warn-ink);padding:10px 12px;border-radius:10px;font-size:.9rem;margin-bottom:12px}
+.datebar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.datebar input[type=date]{flex:1;min-width:0;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.btn{min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.small{min-height:36px;padding:4px 10px;font-size:.875rem}
+.btn.icon{min-width:44px;padding:8px}
+.btn.danger{color:var(--danger)}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:4px;padding-block:4px 10px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{flex:1;min-height:44px;border:0;background:transparent;border-radius:10px;font-weight:600;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--accent-soft);color:var(--accent)}
+.count{font-weight:500;opacity:.85}
+.panel[hidden]{display:none}
+.summary{display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.summary b{font-family:var(--font-display);font-size:1.5rem}
+.summary span{color:var(--muted);font-size:.875rem}
+.gear{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px;align-items:center}
+.gear small{color:var(--muted);margin-right:2px}
+.chip{display:inline-flex;align-items:center;font-size:.78rem;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);white-space:nowrap}
+.chip.have{color:var(--ink);border-color:var(--accent)}
+.chip.need{border-style:dashed}
+.list{display:flex;flex-direction:column;gap:10px;padding:0;margin:0;list-style:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+.card.done{opacity:.62}
+.card.done .name{text-decoration:line-through}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.name{font-family:var(--font-display);font-weight:700;font-size:1.05rem;min-width:0}
+.check{display:flex;gap:10px;align-items:center;min-height:44px;min-width:0;flex:1}
+.check input{width:24px;height:24px;accent-color:var(--accent);flex:none}
+.lines{display:flex;flex-direction:column;gap:6px;margin:4px 0 10px;font-size:.92rem}
+.line{display:flex;gap:8px;align-items:flex-start}
+.line span:last-child{min-width:0}
+.kid{flex:none;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:6px;margin-top:2px;letter-spacing:.03em}
+.kid.k5{background:var(--k5-bg);color:var(--k5)}
+.kid.k3{background:var(--k3-bg);color:var(--k3)}
+.kid.both{background:var(--accent-soft);color:var(--accent)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{min-height:36px;padding:4px 12px;border:0;background:transparent;font-size:.85rem;font-weight:500}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button.s5[aria-pressed="true"]{background:var(--k5);color:var(--surface)}
+.seg button.s3[aria-pressed="true"]{background:var(--k3);color:var(--surface)}
+.stepper{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.stepper b{min-width:3.6ch;text-align:center;font-weight:600}
+.spacer{flex:1}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:18px 16px}
+.empty p{margin:6px 0 12px;color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+details.tpl{margin-top:14px}
+details.tpl summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--accent)}
+label.notes{display:block;margin-top:18px;font-weight:600}
+textarea{width:100%;min-height:96px;margin-top:6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);resize:vertical}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px}
+.filters button{flex:none;min-height:36px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:.875rem;font-weight:500}
+.filters button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.opt{display:flex;align-items:center;gap:10px;min-height:44px;color:var(--muted);font-size:.92rem}
+.opt input{width:20px;height:20px;accent-color:var(--accent)}
+.meta{color:var(--muted);font-size:.85rem;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.custom{margin-top:18px}
+.custom .grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
+.custom input[type=text]{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);width:100%}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.stat b{display:block;font-family:var(--font-display);font-size:1.4rem;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:.78rem}
+.hist .date{font-family:var(--font-display);font-weight:700}
+.hist p{margin:4px 0 8px;font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+@media (min-width:560px){ .custom .grid{grid-template-columns:1fr 2fr auto} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* standalone reset */
+:root{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+.auth{max-width:380px;margin:24px auto}.auth h2{margin:0 0 4px}.auth p{color:var(--muted);margin:0 0 12px;font-size:.9rem}.auth input{width:100%;box-sizing:border-box;margin-bottom:8px;min-height:44px;padding:8px 10px;font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}.auth .err{color:var(--danger);min-height:1.2em;font-size:.9rem}.who{font-size:.8rem;color:var(--muted);margin:0 0 8px;display:flex;gap:8px;align-items:center;justify-content:space-between}.status[data-s="wait"]{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Monkey Movers</h1>
+      <p>Home training for a 5-year-old and a 3-year-old</p>
+    </div>
+    <button class="status" id="status" data-s="load" type="button">Loading saved days…</button>
+  </div>
+  <div id="banner"></div>
+
+  <form id="authForm" class="card auth" hidden>
+    <h2>Sign in</h2>
+    <p>Monkey Movers is private. Use the email and password you were given.</p>
+    <input type="email" id="aEmail" autocomplete="username" placeholder="Email" required aria-label="Email">
+    <input type="password" id="aPass" autocomplete="current-password" placeholder="Password" required aria-label="Password">
+    <div class="err" id="aErr" role="alert"></div>
+    <button class="btn primary" id="aGo" type="submit">Sign in</button>
+  </form>
+
+  <div id="app" hidden>
+  <p class="who"><span id="who"></span><button class="btn small" id="signOut" type="button">Sign out</button></p>
+  <div class="datebar">
+    <button class="btn icon" id="prev" type="button" aria-label="Previous day">‹</button>
+    <input type="date" id="dateIn" aria-label="Training day">
+    <button class="btn icon" id="next" type="button" aria-label="Next day">›</button>
+    <button class="btn" id="today" type="button">Today</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-today" data-tab="today" type="button">Today <span class="count" id="c-today"></span></button>
+    <button class="tab" role="tab" id="t-add" data-tab="add" type="button">Add</button>
+    <button class="tab" role="tab" id="t-history" data-tab="history" type="button">History <span class="count" id="c-history"></span></button>
+  </div>
+
+  <section class="panel" id="p-today" role="tabpanel" aria-labelledby="t-today">
+    <h2 id="dayTitle"></h2>
+    <div id="summary"></div>
+    <div id="todayList"></div>
+    <label class="notes" for="notes">How did it go?</label>
+    <textarea id="notes" placeholder="What they enjoyed, what was hard, what to change tomorrow."></textarea>
+  </section>
+
+  <section class="panel" id="p-add" role="tabpanel" aria-labelledby="t-add" hidden>
+    <div class="filters" id="filters"></div>
+    <label class="opt"><input type="checkbox" id="mine"> Only activities that use gear I own, plus tape, pillows and chalk</label>
+    <ul id="library" class="list" style="margin-top:8px"></ul>
+    <div class="custom card">
+      <h3>Your own activity</h3>
+      <div class="grid">
+        <input type="text" id="cName" placeholder="Name" maxlength="60" aria-label="Activity name">
+        <input type="text" id="cNote" placeholder="What the kids do (optional)" maxlength="200" aria-label="What the kids do">
+        <button class="btn primary" id="cAdd" type="button">Add</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-history" role="tabpanel" aria-labelledby="t-history" hidden>
+    <div class="btns" style="margin-bottom:12px">
+      <button class="btn small" id="bkExport" type="button">Download backup</button>
+      <button class="btn small" id="bkImport" type="button">Restore backup</button>
+      <input type="file" id="bkFile" accept="application/json,.json" hidden>
+    </div>
+    <div id="histStats"></div>
+    <ul id="histList" class="list"></ul>
+  </section>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var OWNED = ['ladder','cones','discs','rope','whistle'];
+var HOME = ['tape','pillows','chalk'];
+var GEAR = {ladder:'Ladder',cones:'Cones',discs:'Discs',rope:'Rope',whistle:'Whistle',ball:'Soft ball',basket:'Basket',balloon:'Balloon',tape:'Masking tape',pillows:'Pillows and chairs',chalk:'Chalk',bubbles:'Bubbles',bike:'Bike or scooter',racquet:'Foam racquet'};
+var CATS = ['Warm-up','Course','Whistle games','Balance','Jumping','Ball & racquet','Strength play','Free play','Cool-down'];
+
+var ACTS = [
+ {id:'copy-me',cat:'Warm-up',name:'Copy Me warm-up',min:3,gear:[],
+  five:'Take turns leading: marching, jumping jacks, arm circles, 5 squats.',
+  three:'March, jump and reach for the sky. You show it, they copy.'},
+ {id:'whistle-rules',cat:'Warm-up',name:'Learn the whistle',min:2,gear:['whistle'],
+  five:'One blast = go. Two blasts = freeze like a statue. Practise a few times.',
+  three:'Same rules. Show the statue freeze first.'},
+ {id:'cone-weave',cat:'Course',name:'Cone weave',min:4,gear:['cones'],
+  five:'Jog a zigzag of 5 cones about 1 m apart, then weave back the other way.',
+  three:'Walk the zigzag first, then jog it. Hold a hand if needed.'},
+ {id:'ladder-feet',cat:'Course',name:'Ladder footwork',min:4,gear:['ladder'],
+  five:'One foot per square, then two feet per square, then sideways.',
+  three:'Walk one foot per square, slowly.'},
+ {id:'disc-stones',cat:'Course',name:'Disc stepping stones',min:3,gear:['discs'],
+  five:'Hop across 4 discs a stride apart, then try hopping on one foot.',
+  three:'Step on each disc. "Don’t fall in the river!"'},
+ {id:'course-walk',cat:'Course',name:'Full course: walk it',min:5,gear:['cones','ladder','discs','rope'],
+  five:'Walk every station slowly to learn the order.',
+  three:'Walk the stations holding a hand if needed.'},
+ {id:'course-jog',cat:'Course',name:'Full course: jog it',min:4,gear:['cones','ladder','discs','rope'],
+  five:'Weave the cones, ladder feet, hop the discs, balance on the rope.',
+  three:'Jog the cones, walk the ladder, step on the discs.'},
+ {id:'course-race',cat:'Course',name:'Full course: race round',min:4,gear:['cones','ladder','discs','rope'],
+  five:'Beat your own time. Time each round on your phone.',
+  three:'No timing. A high-five at every station.'},
+ {id:'whistle-run',cat:'Whistle games',name:'Run and freeze',min:3,gear:['whistle'],
+  five:'Run in the open space on one blast, freeze on two. A wrong move earns a funny dance.',
+  three:'Same game. Show the freeze first.'},
+ {id:'whistle-commands',cat:'Whistle games',name:'Whistle commands',min:3,gear:['whistle'],
+  five:'1 blast = run, 2 = freeze, 3 = jump three times.',
+  three:'1 blast = run, 2 = freeze. Skip the third command.'},
+ {id:'colour-dash',cat:'Whistle games',name:'Colour dash',min:3,gear:['whistle','discs','cones'],
+  five:'Call a colour. On the whistle, run to a disc or cone of that colour.',
+  three:'Point to the colour and run together.'},
+ {id:'rope-line',cat:'Balance',name:'Rope balance line',min:3,gear:['rope'],
+  five:'Walk heel to toe along the rope, then sideways, then backwards. Try a soft toy on the head.',
+  three:'Walk along it with arms out like an airplane.'},
+ {id:'flamingo',cat:'Balance',name:'Flamingo stand',min:2,gear:[],
+  five:'Stand on one leg for a count of 5 to 10, then switch. Try it on a folded towel.',
+  three:'One leg for a count of 3, holding your hand.'},
+ {id:'statue-dance',cat:'Balance',name:'Music and statues',min:3,gear:[],
+  five:'Dance, then freeze in a funny pose when the music stops. Hold for 5 seconds.',
+  three:'Dance and freeze. Copy their pose.'},
+ {id:'rope-snake',cat:'Jumping',name:'Rope snake jumps',min:3,gear:['rope'],
+  five:'Lay the rope straight. Jump over it side to side with both feet, then forward.',
+  three:'Step over the rope, then try a two-foot jump. Wiggle it like a snake.'},
+ {id:'bucket-throw',cat:'Ball & racquet',name:'Throw into a basket',min:4,gear:['ball','basket'],
+  five:'Underarm throw from 1.5 m. Step back a pace after three hits.',
+  three:'Stand close, or roll the ball in.'},
+ {id:'bounce-catch',cat:'Ball & racquet',name:'Bounce and catch',min:3,gear:['ball'],
+  five:'You bounce, they catch with both hands. Count catches in a row.',
+  three:'Roll first, then a gentle bounce to the chest.'},
+ {id:'goal-kick',cat:'Ball & racquet',name:'Goal kick',min:3,gear:['ball','cones'],
+  five:'Kick a soft ball between two cones from a short distance.',
+  three:'Kick a ball that is already rolling toward them.'},
+ {id:'balloon-keepup',cat:'Ball & racquet',name:'Balloon keep-up',min:3,gear:['balloon'],
+  five:'Tap the balloon up and count the hits before it lands.',
+  three:'Catch it, then tap it up with a hand.'},
+ {id:'animal-walks',cat:'Strength play',name:'Animal parade',min:4,gear:[],
+  five:'Bear crawl, frog jumps, crab walk and duck walk, 30 to 40 seconds each.',
+  three:'Copy the animals in shorter turns. Waddle like a duck.'},
+ {id:'cone-carry',cat:'Strength play',name:'Cone carry and stack',min:3,gear:['cones'],
+  five:'Carry the cones one at a time to a spot and build a tower.',
+  three:'Carry one cone at a time and add it to the pile.'},
+ {id:'free-play',cat:'Free play',name:'Free play with the kit',min:3,gear:['cones','discs'],
+  five:'Let them invent a new path or game with the cones and discs.',
+  three:'Let them move things around. You stay close.'},
+ {id:'design-course',cat:'Free play',name:'Kids design the course',min:5,gear:['cones','discs','ladder','rope'],
+  five:'They place the stations. You check it is safe, then they run it.',
+  three:'Help place one station, then run it together.'},
+ {id:'cool-down',cat:'Cool-down',name:'Cool-down',min:2,gear:[],
+  five:'Slow walk, 5 deep breaths, reach up, touch toes, butterfly sit.',
+  three:'Slow walk, belly breaths with a hand on the tummy, reach up high.'},
+ {id:'simon-says',cat:'Warm-up',name:'Simon Says',min:3,gear:[],
+  five:'Call moves like hop, spin, tiptoe and crouch. Swap so they get to be Simon.',
+  three:'Keep to simple moves: jump, clap, touch toes. Always do it with them.'},
+ {id:'follow-leader',cat:'Warm-up',name:'Follow the leader',min:3,gear:[],
+  five:'Take turns leading hops, tiptoes, skips and giant steps around the room.',
+  three:'Follow you first, then lead for a few seconds.'},
+ {id:'activity-jar',cat:'Warm-up',name:'Activity jar',min:4,gear:[],
+  five:'Write moves on paper slips (jump, hop, spin, crawl) and draw one. Roll a die for how many times.',
+  three:'They pick the slip, you count to 3 together.'},
+ {id:'pillow-river',cat:'Course',name:'Pillow river',min:3,gear:['pillows'],
+  five:'Cross a river of pillows without touching the floor. Space them further apart each round.',
+  three:'Pillows close together, holding your hand for the bigger steps.'},
+ {id:'chalk-circuit',cat:'Course',name:'Chalk station circuit',min:6,gear:['chalk'],
+  five:'Draw 5 stations outside: hopscotch, a crawl line, a jump square, a zigzag and a target. Visit them in order.',
+  three:'Same stations with simpler tasks: step, crawl, two-foot jump.'},
+ {id:'tape-hopscotch',cat:'Jumping',name:'Tape hopscotch',min:4,gear:['tape'],
+  five:'Tape numbered squares on the floor. Jump through them, then hop on one foot.',
+  three:'Two-foot jumps through the first few squares, counting out loud.'},
+ {id:'jump-lines',cat:'Jumping',name:'Jumping lines',min:3,gear:['tape'],
+  five:'Jump forward, backward and sideways over a tape line, then along a zigzag line.',
+  three:'Step and jump over a straight line, forwards only.'},
+ {id:'soft-landing',cat:'Jumping',name:'Soft landing jumps',min:3,gear:['rope'],
+  five:'Jump over the rope and land quietly with bent knees. Freeze for 2 seconds on landing.',
+  three:'Step down from a thick cushion holding your hand. Freeze on landing.'},
+ {id:'whistle-groups',cat:'Whistle games',name:'Whistle groups',min:3,gear:['whistle'],
+  five:'Walk around the room. The number of blasts is the group size: gather in a group of that many (you count as one) and do a move together.',
+  three:'Always find a partner (you), hold hands and do a move together.'},
+ {id:'red-green',cat:'Whistle games',name:'Red light, green light',min:3,gear:['whistle'],
+  five:'Run toward you on green, stop on the whistle (red). Add slow motion for yellow.',
+  three:'Walk or run toward you and practise stopping on the whistle.'},
+ {id:'colour-jump',cat:'Whistle games',name:'Colour jump',min:3,gear:['discs'],
+  five:'Call a colour, or two in a row, and jump onto the matching disc.',
+  three:'Call one colour at a time and point to the disc if they need help.'},
+ {id:'builders-bulldozers',cat:'Whistle games',name:'Builders and bulldozers',min:4,gear:['cones','whistle'],
+  five:'Scatter cones. One knocks them over, the other stands them up, running back to the start line each time. The whistle ends the round, then swap.',
+  three:'Fewer cones and a shorter start distance. No need to run back each time.'},
+ {id:'animal-yoga',cat:'Balance',name:'Animal yoga',min:3,gear:[],
+  five:'Hold tree, cat and cow, and downward dog for 5 slow breaths each.',
+  three:'Cat and cow and downward dog for 3 breaths. You show each pose first.'},
+ {id:'mirror',cat:'Balance',name:'Mirror, mirror',min:3,gear:[],
+  five:'Copy your slow movements like a mirror, then swap so you copy them.',
+  three:'Copy big, simple moves: arms up, arms out, bend and stretch.'},
+ {id:'blanket-tunnel',cat:'Strength play',name:'Blanket tunnel crawl',min:4,gear:['pillows'],
+  five:'Crawl through a blanket tunnel over two chairs, then climb over a pillow hill at the end.',
+  three:'A short tunnel with a peek-a-boo end. Crawl to a toy waiting there.'},
+ {id:'log-roll',cat:'Strength play',name:'Log roll race',min:3,gear:[],
+  five:'Roll like a log along a mat or carpet with arms overhead. Race across the room.',
+  three:'Roll over a short distance, or alongside you.'},
+ {id:'balloon-volley',cat:'Ball & racquet',name:'Balloon volleyball',min:4,gear:['balloon','rope'],
+  five:'Hold the rope at chest height as a net and hit the balloon back and forth over it.',
+  three:'No net. Hit the balloon to you and catch it.'},
+ {id:'disc-target',cat:'Ball & racquet',name:'Disc target toss',min:4,gear:['discs','ball'],
+  five:'Throw a soft ball underarm to land on a disc 2 m away. Then try a farther disc.',
+  three:'Roll the ball from 1 m to reach a disc.'},
+ {id:'cone-bowling',cat:'Ball & racquet',name:'Cone bowling',min:3,gear:['cones','ball'],
+  five:'Stand 5 cones up and roll a ball from 2 to 3 m. Count how many fall.',
+  three:'Three cones, rolling from 1 m.'},
+ {id:'wall-rally',cat:'Ball & racquet',name:'Soft racquet wall rally',min:5,gear:['ball','racquet'],
+  five:'Hit a soft ball against the wall with a foam racquet after one bounce. Keep it to a few minutes.',
+  three:'Roll the ball at the wall and catch or kick it when it comes back.'},
+ {id:'bubble-pop',cat:'Free play',name:'Bubble pop',min:4,gear:['bubbles'],
+  five:'Pop bubbles by jumping, clapping and reaching up on tiptoe.',
+  three:'Chase and pop bubbles with their hands.'},
+ {id:'ride-roll',cat:'Free play',name:'Bike or scooter loop',min:8,gear:['bike','cones'],
+  five:'Ride a loop around cones, then slalom between them. Helmet on.',
+  three:'Ride in straight lines or push along with their feet. Helmet on and an adult beside them.'}
+];
+var BY_ID = {}; ACTS.forEach(function(a){ BY_ID[a.id]=a; });
+
+var TEMPLATES = [
+ {name:'Day 1 starter',ids:['copy-me','whistle-rules','course-walk','course-jog','whistle-run','free-play','cool-down']},
+ {name:'Animal day',ids:['copy-me','animal-walks','ladder-feet','rope-line','cone-weave','flamingo','cool-down']},
+ {name:'Race day',ids:['copy-me','whistle-commands','course-jog','course-race','colour-dash','cool-down']},
+ {name:'Ball day',ids:['copy-me','bounce-catch','bucket-throw','goal-kick','balloon-keepup','cool-down']},
+ {name:'Listening day',ids:['copy-me','whistle-rules','whistle-groups','red-green','colour-jump','mirror','cool-down']},
+ {name:'Rainy day indoors',ids:['simon-says','tape-hopscotch','pillow-river','jump-lines','blanket-tunnel','log-roll','cool-down']},
+ {name:'Squash starter',ids:['copy-me','balloon-volley','disc-target','wall-rally','soft-landing','cool-down']}
+];
+
+var $ = function(s){ return document.querySelector(s); };
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseYmd(s){ var p=s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function shift(s,n){ var d=parseYmd(s); d.setDate(d.getDate()+n); return ymd(d); }
+var fmtLong = new Intl.DateTimeFormat(undefined,{weekday:'long',day:'numeric',month:'long'});
+var fmtShort = new Intl.DateTimeFormat(undefined,{weekday:'short',day:'numeric',month:'short'});
+
+/* ===== PASTE YOUR FIREBASE WEB APP SETTINGS HERE ===== */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAOszbAIksq4HLlrxUciOHXDOGbBQvwpIA",
+  authDomain: "monkey-movers.firebaseapp.com",
+  projectId: "monkey-movers",
+  appId: "1:256153538784:web:57d43115a94a6b414b8085"
+};
+/* ====================================================== */
+var CLOUD = !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey.indexOf('PASTE')!==0);
+var SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+var LS_KEY = 'little-movers-days-v1';
+function readLocal(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}')||{}; }catch(e){ return {}; } }
+function writeLocal(date,doc){ try{ var all=readLocal(); if(doc){ all[date]=doc; } else { delete all[date]; } localStorage.setItem(LS_KEY,JSON.stringify(all)); }catch(e){} }
+
+var state = {
+  date: ymd(new Date()), items: [], notes: '', lastUpdated: 0,
+  tab: 'today', cat: 'all', mine: false,
+  days: new Map(), db: null, canWrite: true, confirmDel: null, user: '', unsub: null
+};
+var outbox = new Map(), writing = false, timer = null, loadTimer = null, gotServer = false;
+
+var local = readLocal();
+if(!CLOUD) Object.keys(local).forEach(function(k){ if(local[k] && Array.isArray(local[k].items)) state.days.set(k,local[k]); });
+
+/* ---------- status ---------- */
+function setStatus(s){
+  var el = $('#status');
+  var text = {load:'Loading saved days…',saving:'Saving…',saved:'All changes saved',local:'Saved on this device only',err:'Couldn’t save. Tap to retry',view:'View only, changes are not saved',slow:'Can’t reach saved days yet',wait:'Waiting for connection…'}[s] || '';
+  el.dataset.s = s; el.textContent = text;
+}
+
+/* ---------- day plan model ---------- */
+function actOf(it){ return it.k==='custom' ? null : BY_ID[it.k]; }
+function itemName(it){ var a=actOf(it); return it.k==='custom' ? (it.name||'Your activity') : (a?a.name:'Activity'); }
+function newItem(id){ var a=BY_ID[id]; return {k:id,who:'both',min:a.min,done:false}; }
+function buildDoc(){
+  return {date:state.date, items:state.items.map(function(i){ return Object.assign({},i); }), notes:state.notes, updatedAt:Date.now(), by:state.user||''};
+}
+function isEmpty(doc){ return !doc.items.length && !String(doc.notes||'').trim(); }
+
+function changed(){
+  if(!state.canWrite){ setStatus('view'); return; }
+  var doc = buildDoc();
+  state.lastUpdated = doc.updatedAt;
+  if(isEmpty(doc)){ state.days.delete(state.date); } else { state.days.set(state.date,doc); }
+  outbox.set(state.date,doc);
+  setStatus('saving');
+  clearTimeout(timer); timer = setTimeout(drain,500);
+  renderHistory(); renderCounts();
+}
+
+async function persist(date,doc){
+  var empty = isEmpty(doc);
+  if(!CLOUD) writeLocal(date, empty ? null : doc);
+  if(!state.db) return;
+  var ref = state.db.doc('days/'+date);
+  if(empty){ await ref.delete(); } else { await ref.set(doc); }
+}
+async function drain(){
+  if(writing) return;
+  writing = true;
+  var failed = false;
+  try{
+    while(outbox.size){
+      var first = outbox.entries().next().value;
+      outbox.delete(first[0]);
+      try{ await persist(first[0],first[1]); }
+      catch(e){ failed = true; if(!outbox.has(first[0])) outbox.set(first[0],first[1]); break; }
+    }
+  } finally { writing = false; }
+  setStatus(failed ? 'err' : (state.db ? 'saved' : 'local'));
+}
+
+function loadDay(date){
+  state.date = date;
+  var doc = state.days.get(date);
+  state.items = doc ? doc.items.map(function(i){ return Object.assign({},i); }) : [];
+  state.notes = doc ? (doc.notes||'') : '';
+  state.lastUpdated = doc ? (doc.updatedAt||0) : 0;
+  $('#notes').value = state.notes;
+  $('#dateIn').value = date;
+  renderAll();
+}
+function gotoDay(date){
+  if(!date) return;
+  if(timer){ clearTimeout(timer); timer=null; drain(); }
+  loadDay(date);
+}
+
+/* ---------- rendering ---------- */
+function kidLine(cls,label,text){ return '<div class="line"><span class="kid '+cls+'">'+label+'</span><span>'+esc(text)+'</span></div>'; }
+function linesFor(a,who){
+  var out='';
+  if(who!=='3') out += kidLine('k5','5 yr',a.five);
+  if(who!=='5') out += kidLine('k3','3 yr',a.three);
+  return '<div class="lines">'+out+'</div>';
+}
+function gearChips(list){
+  return list.map(function(g){
+    var own=OWNED.indexOf(g)>-1, home=HOME.indexOf(g)>-1;
+    return '<span class="chip '+(own?'have':(home?'':'need'))+'">'+((own||home)?'':'needs ')+esc(GEAR[g]||g)+'</span>';
+  }).join('');
+}
+
+function renderCounts(){
+  $('#c-today').textContent = state.items.length ? '('+state.items.length+')' : '';
+  $('#c-history').textContent = state.days.size ? '('+state.days.size+')' : '';
+}
+
+function renderToday(){
+  $('#dayTitle').textContent = fmtLong.format(parseYmd(state.date)) + (state.date===ymd(new Date()) ? ' (today)' : '');
+  var items = state.items, total=0, done=0, gear=[];
+  items.forEach(function(it){
+    total += it.min||0; if(it.done) done++;
+    var a=actOf(it); if(a) a.gear.forEach(function(g){ if(gear.indexOf(g)<0) gear.push(g); });
+  });
+  var html='';
+  if(items.length){
+    html += '<div class="summary"><div><b>'+total+'</b> <span>min planned</span></div><div><b>'+done+'/'+items.length+'</b> <span>done</span></div></div>';
+    if(gear.length) html += '<div class="gear"><small>Set out:</small>'+gearChips(gear)+'</div>';
+  }
+  $('#summary').innerHTML = html;
+
+  var list = $('#todayList');
+  if(!items.length){
+    list.innerHTML = '<div class="empty"><h3>Nothing planned yet</h3><p>Start from a template, or pick activities one by one.</p><div class="btns">'
+      + TEMPLATES.map(function(t,i){ return '<button class="btn primary" data-act="tpl" data-i="'+i+'" type="button">'+esc(t.name)+'</button>'; }).join('')
+      + '<button class="btn" data-act="browse" type="button">Browse activities</button></div></div>';
+    return;
+  }
+  var h='<ul class="list">';
+  items.forEach(function(it,i){
+    var a=actOf(it);
+    var body = a ? linesFor(a,it.who) : (it.note ? '<div class="lines">'+kidLine('both','Both',it.note)+'</div>' : '');
+    h += '<li class="card'+(it.done?' done':'')+'">'
+      + '<div class="row"><label class="check"><input type="checkbox" data-act="done" data-i="'+i+'"'+(it.done?' checked':'')+'><span class="name">'+esc(itemName(it))+'</span></label></div>'
+      + body
+      + '<div class="tools">'
+      +   '<div class="seg" role="group" aria-label="Who does this">'
+      +     '<button class="s" data-act="who" data-v="both" data-i="'+i+'" aria-pressed="'+(it.who==='both')+'" type="button">Both</button>'
+      +     '<button class="s5" data-act="who" data-v="5" data-i="'+i+'" aria-pressed="'+(it.who==='5')+'" type="button">5 yr</button>'
+      +     '<button class="s3" data-act="who" data-v="3" data-i="'+i+'" aria-pressed="'+(it.who==='3')+'" type="button">3 yr</button>'
+      +   '</div>'
+      +   '<div class="stepper"><button class="btn small icon" data-act="minus" data-i="'+i+'" type="button" aria-label="One minute less">−</button><b>'+(it.min||0)+' min</b><button class="btn small icon" data-act="plus" data-i="'+i+'" type="button" aria-label="One minute more">+</button></div>'
+      +   '<span class="spacer"></span>'
+      +   '<button class="btn small icon" data-act="up" data-i="'+i+'" type="button" aria-label="Move up"'+(i===0?' disabled':'')+'>↑</button>'
+      +   '<button class="btn small icon" data-act="down" data-i="'+i+'" type="button" aria-label="Move down"'+(i===items.length-1?' disabled':'')+'>↓</button>'
+      +   '<button class="btn small danger" data-act="rm" data-i="'+i+'" type="button">Remove</button>'
+      + '</div></li>';
+  });
+  h += '</ul>';
+  h += '<details class="tpl"><summary>Add a template to this day</summary><div class="btns">'
+    + TEMPLATES.map(function(t,i){ return '<button class="btn" data-act="tpl" data-i="'+i+'" type="button">'+esc(t.name)+'</button>'; }).join('')
+    + '</div></details>';
+  list.innerHTML = h;
+}
+
+function renderAdd(){
+  var f = '<button data-cat="all" aria-pressed="'+(state.cat==='all')+'" type="button">All</button>';
+  CATS.forEach(function(c){ f += '<button data-cat="'+esc(c)+'" aria-pressed="'+(state.cat===c)+'" type="button">'+esc(c)+'</button>'; });
+  $('#filters').innerHTML = f;
+  $('#mine').checked = state.mine;
+  var shown = ACTS.filter(function(a){
+    if(state.cat!=='all' && a.cat!==state.cat) return false;
+    if(state.mine && a.gear.some(function(g){ return OWNED.indexOf(g)<0 && HOME.indexOf(g)<0; })) return false;
+    return true;
+  });
+  shown.sort(function(a,b){ return CATS.indexOf(a.cat)-CATS.indexOf(b.cat); });
+  if(!shown.length){ $('#library').innerHTML='<div class="empty"><p>No activities match these filters.</p></div>'; return; }
+  var inPlan = {}; state.items.forEach(function(it){ inPlan[it.k]=(inPlan[it.k]||0)+1; });
+  $('#library').innerHTML = shown.map(function(a){
+    var n = inPlan[a.id]||0;
+    return '<li class="card" style="list-style:none">'
+      + '<div class="row"><div style="min-width:0"><div class="name">'+esc(a.name)+'</div>'
+      +   '<div class="meta"><span>'+esc(a.cat)+'</span><span>·</span><span>'+a.min+' min</span>'+(n?'<span>·</span><span style="color:var(--accent);font-weight:600">in today’s plan ×'+n+'</span>':'')+'</div></div>'
+      +   '<button class="btn small primary" data-act="add" data-id="'+a.id+'" type="button">Add</button></div>'
+      + '<div style="margin-top:8px">'+linesFor(a,'both')+'</div>'
+      + (a.gear.length ? '<div class="gear" style="margin:0">'+gearChips(a.gear)+'</div>' : '')
+      + '</li>';
+  }).join('');
+}
+
+function weekStart(){ var d=new Date(); var wd=(d.getDay()+6)%7; d.setDate(d.getDate()-wd); return ymd(d); }
+function renderHistory(){
+  var dates = Array.from(state.days.keys()).sort().reverse();
+  var ws = weekStart(), weekDays=0, weekMin=0;
+  dates.forEach(function(d){
+    if(d>=ws){ var doc=state.days.get(d); weekDays++; doc.items.forEach(function(i){ weekMin += i.min||0; }); }
+  });
+  $('#histStats').innerHTML = '<div class="stats"><div class="stat"><b>'+weekDays+'</b><span>days this week</span></div><div class="stat"><b>'+weekMin+'</b><span>min planned this week</span></div><div class="stat"><b>'+dates.length+'</b><span>days saved</span></div></div>';
+  if(!dates.length){ $('#histList').innerHTML='<div class="empty"><h3>No saved days yet</h3><p>Plan today’s session and it appears here automatically.</p></div>'; return; }
+  $('#histList').innerHTML = dates.map(function(d){
+    var doc=state.days.get(d), mins=0, done=0;
+    doc.items.forEach(function(i){ mins+=i.min||0; if(i.done) done++; });
+    var names = doc.items.map(itemName).join(', ');
+    var del = state.confirmDel===d;
+    return '<li class="card hist" style="list-style:none">'
+      + '<div class="row"><span class="date">'+esc(fmtShort.format(parseYmd(d)))+'</span><span class="meta">'+doc.items.length+' activities · '+mins+' min · '+done+' done</span></div>'
+      + '<p>'+esc(names||'No activities')+'</p>'
+      + (doc.notes ? '<p style="color:var(--ink)">“'+esc(doc.notes.length>140?doc.notes.slice(0,140)+'…':doc.notes)+'”</p>' : '')
+      + '<div class="tools" style="padding-top:8px">'
+      +   '<button class="btn small" data-act="open" data-date="'+d+'" type="button">Open</button>'
+      +   (d!==state.date ? '<button class="btn small" data-act="copy" data-date="'+d+'" type="button">Copy to '+esc(fmtShort.format(parseYmd(state.date)))+'</button>' : '')
+      +   '<span class="spacer"></span>'
+      +   '<button class="btn small danger" data-act="del" data-date="'+d+'" type="button">'+(del?'Tap again to delete':'Delete')+'</button>'
+      + '</div></li>';
+  }).join('');
+}
+
+function renderTabs(){
+  ['today','add','history'].forEach(function(t){
+    var on = state.tab===t;
+    $('#t-'+t).setAttribute('aria-selected',on);
+    $('#p-'+t).hidden = !on;
+  });
+}
+function renderAll(){ renderTabs(); renderToday(); renderAdd(); renderHistory(); renderCounts(); }
+function setTab(t){
+  state.tab=t; renderTabs();
+  try{ history.replaceState(null,'','#'+t); }catch(e){}
+  window.scrollTo(0,0);
+}
+
+/* ---------- events ---------- */
+function mutate(fn){ fn(); renderToday(); renderAdd(); changed(); }
+
+document.addEventListener('click',function(e){
+  var t = e.target.closest('[data-tab],[data-act],[data-cat]');
+  if(!t) return;
+  if(t.dataset.tab){ setTab(t.dataset.tab); return; }
+  if(t.dataset.cat){ state.cat=t.dataset.cat; renderAdd(); return; }
+  var act=t.dataset.act, i=+t.dataset.i;
+  switch(act){
+    case 'browse': setTab('add'); break;
+    case 'tpl': mutate(function(){ TEMPLATES[i].ids.forEach(function(id){ state.items.push(newItem(id)); }); }); break;
+    case 'add': mutate(function(){ state.items.push(newItem(t.dataset.id)); }); t.textContent='Added ✓'; setTimeout(function(){ t.textContent='Add'; },900); break;
+    case 'who': mutate(function(){ state.items[i].who=t.dataset.v; }); break;
+    case 'minus': mutate(function(){ state.items[i].min=Math.max(1,(state.items[i].min||1)-1); }); break;
+    case 'plus': mutate(function(){ state.items[i].min=Math.min(60,(state.items[i].min||0)+1); }); break;
+    case 'up': if(i>0) mutate(function(){ var x=state.items.splice(i,1)[0]; state.items.splice(i-1,0,x); }); break;
+    case 'down': if(i<state.items.length-1) mutate(function(){ var x=state.items.splice(i,1)[0]; state.items.splice(i+1,0,x); }); break;
+    case 'rm': mutate(function(){ state.items.splice(i,1); }); break;
+    case 'open': gotoDay(t.dataset.date); setTab('today'); break;
+    case 'copy':
+      var src=state.days.get(t.dataset.date);
+      if(src){ mutate(function(){ src.items.forEach(function(it){ var c=Object.assign({},it); c.done=false; state.items.push(c); }); }); setTab('today'); }
+      break;
+    case 'del':
+      var d=t.dataset.date;
+      if(state.confirmDel!==d){ state.confirmDel=d; renderHistory(); setTimeout(function(){ if(state.confirmDel===d){ state.confirmDel=null; renderHistory(); } },4000); }
+      else { state.confirmDel=null; deleteDay(d); }
+      break;
+  }
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.dataset && t.dataset.act==='done'){ mutate(function(){ state.items[+t.dataset.i].done=t.checked; }); }
+  else if(t.id==='mine'){ state.mine=t.checked; renderAdd(); }
+  else if(t.id==='dateIn'){ gotoDay(t.value); }
+});
+$('#prev').addEventListener('click',function(){ gotoDay(shift(state.date,-1)); });
+$('#next').addEventListener('click',function(){ gotoDay(shift(state.date,1)); });
+$('#today').addEventListener('click',function(){ gotoDay(ymd(new Date())); });
+$('#notes').addEventListener('input',function(e){ state.notes=e.target.value; changed(); });
+$('#cAdd').addEventListener('click',function(){
+  var n=$('#cName').value.trim(); if(!n) { $('#cName').focus(); return; }
+  var note=$('#cNote').value.trim();
+  mutate(function(){ state.items.push({k:'custom',name:n,note:note,who:'both',min:3,done:false}); });
+  $('#cName').value=''; $('#cNote').value='';
+  var b=$('#cAdd'); b.textContent='Added ✓'; setTimeout(function(){ b.textContent='Add'; },900);
+});
+$('#status').addEventListener('click',function(){ if($('#status').dataset.s==='err') drain(); });
+window.addEventListener('hashchange',function(){ var h=location.hash.slice(1); if(['today','add','history'].indexOf(h)>-1 && h!==state.tab){ state.tab=h; renderTabs(); } });
+
+async function deleteDay(d){
+  state.days.delete(d); if(!CLOUD) writeLocal(d,null);
+  outbox.delete(d);
+  if(d===state.date){ state.items=[]; state.notes=''; state.lastUpdated=0; $('#notes').value=''; }
+  renderAll();
+  if(state.db && state.canWrite){
+    try{ await state.db.doc('days/'+d).delete(); setStatus('saved'); }catch(e){ setStatus('err'); }
+  }
+}
+
+/* ---------- saved days from the database ---------- */
+function onDays(snap){
+  var m = new Map();
+  snap.docs.forEach(function(d){ var v=d.data(); if(v && Array.isArray(v.items)) m.set(d.id,v); });
+  state.days = m;
+  if(!snap.metadata.fromCache){
+    gotServer = true; clearTimeout(loadTimer);
+    if(!outbox.size && !writing && $('#status').dataset.s!=='err') setStatus(state.canWrite ? 'saved' : 'view');
+  }
+  var doc = m.get(state.date);
+  if(!outbox.size && !writing && doc && (doc.updatedAt||0) > state.lastUpdated){
+    state.items = doc.items.map(function(i){ return Object.assign({},i); });
+    state.notes = doc.notes||''; state.lastUpdated = doc.updatedAt||0;
+    $('#notes').value = state.notes;
+  }
+  renderToday(); renderAdd(); renderHistory(); renderCounts();
+}
+
+async function start(){
+  var h=location.hash.slice(1);
+  if(['today','add','history'].indexOf(h)>-1) state.tab=h;
+  $('#dateIn').value = state.date;
+  renderAll();
+  if(!CLOUD){
+    $('#app').hidden=false; $('#who').parentNode.hidden=true;
+    $('#banner').innerHTML='<div class="banner">Not connected to the shared database yet. Saving on this device only. Add the Firebase settings at the top of the script to share across logins.</div>';
+    setStatus('local'); return;
+  }
+  setStatus('load');
+  startCloud();
+}
+
+var AUTH_MSG = {'auth/invalid-credential':'Wrong email or password.','auth/wrong-password':'Wrong email or password.','auth/user-not-found':'Wrong email or password.','auth/invalid-email':'That email address looks wrong.','auth/too-many-requests':'Too many tries. Wait a few minutes and try again.','auth/network-request-failed':'No connection. Check the internet and try again.','auth/user-disabled':'This account is turned off.'};
+
+async function startCloud(){
+  var A,F,FS,app,auth,fs;
+  try{
+    var mods = await Promise.all([import(SDK+'firebase-app.js'),import(SDK+'firebase-auth.js'),import(SDK+'firebase-firestore.js')]);
+    var AP=mods[0]; A=mods[1]; F=mods[2];
+    app = AP.initializeApp(FIREBASE_CONFIG);
+    auth = A.getAuth(app);
+    try{ fs = F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})}); }
+    catch(e){ fs = F.getFirestore(app); }
+  }catch(e){
+    $('#banner').innerHTML='<div class="banner">Couldn’t load the sign-in service. Check the internet and reload.</div>';
+    setStatus('slow'); return;
+  }
+  window.addEventListener('online',function(){ if(state.db && $('#status').dataset.s==='wait') setStatus('load'); });
+  window.addEventListener('offline',function(){ if(state.db) setStatus('wait'); });
+
+  $('#authForm').addEventListener('submit',async function(ev){
+    ev.preventDefault();
+    $('#aErr').textContent=''; $('#aGo').disabled=true;
+    try{ await A.signInWithEmailAndPassword(auth,$('#aEmail').value.trim(),$('#aPass').value); $('#aPass').value=''; }
+    catch(e){ $('#aErr').textContent = AUTH_MSG[e&&e.code] || 'Couldn’t sign in. Try again.'; }
+    $('#aGo').disabled=false;
+  });
+  $('#signOut').addEventListener('click',function(){ A.signOut(auth); });
+
+  A.onAuthStateChanged(auth,function(u){
+    if(state.unsub){ try{ state.unsub(); }catch(e){} state.unsub=null; }
+    clearTimeout(loadTimer); gotServer=false;
+    if(!u){
+      state.db=null; state.user=''; state.days=new Map(); state.items=[]; state.notes=''; state.lastUpdated=0;
+      outbox.clear(); $('#notes').value='';
+      $('#app').hidden=true; $('#authForm').hidden=false; setStatus('wait'); $('#status').textContent='Signed out';
+      return;
+    }
+    state.user = u.email||'';
+    $('#who').textContent = 'Signed in as '+state.user;
+    $('#authForm').hidden=true; $('#app').hidden=false;
+    state.db = { doc:function(path){ var r=F.doc(fs,path); return { set:function(d){ return F.setDoc(r,d); }, delete:function(){ return F.deleteDoc(r); } }; } };
+    setStatus(navigator.onLine?'load':'wait');
+    loadTimer = setTimeout(function(){ if(!gotServer) setStatus('slow'); },10000);
+    try{
+      state.unsub = F.onSnapshot(F.query(F.collection(fs,'days'),F.orderBy('date','desc'),F.limit(400)),onDays,function(){ setStatus('err'); $('#status').textContent='No access. Ask for your email to be added.'; });
+    }catch(e){ setStatus('err'); }
+    renderAll();
+  });
+}
+/* ---------- backup and restore ---------- */
+function cleanDoc(k,d){
+  var items=(Array.isArray(d.items)?d.items:[]).slice(0,60).map(function(i){
+    var o={k:String(i.k||'custom').slice(0,40),who:['both','5','3'].indexOf(i.who)>-1?i.who:'both',
+      min:Math.max(1,Math.min(60,Number(i.min)||1)),done:!!i.done};
+    if(i.name) o.name=String(i.name).slice(0,60);
+    if(i.note) o.note=String(i.note).slice(0,200);
+    return o;
+  });
+  return {date:k,items:items,notes:String(d.notes||'').slice(0,2000),updatedAt:Number(d.updatedAt)||0};
+}
+$('#bkExport').addEventListener('click',function(){
+  var all={}; state.days.forEach(function(v,k){ all[k]=v; });
+  var blob=new Blob([JSON.stringify({app:'little-movers',version:1,days:all},null,2)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='little-movers-backup-'+ymd(new Date())+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+});
+$('#bkImport').addEventListener('click',function(){ $('#bkFile').click(); });
+$('#bkFile').addEventListener('change',function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var data=JSON.parse(r.result), days=(data&&data.days)||{}, n=0;
+      Object.keys(days).forEach(function(k){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!days[k]||typeof days[k]!=='object') return;
+        var d=cleanDoc(k,days[k]), cur=state.days.get(k);
+        if(!cur||d.updatedAt>(cur.updatedAt||0)){ state.days.set(k,d); if(CLOUD){ outbox.set(k,d); } else { writeLocal(k,d); } n++; }
+      });
+      loadDay(state.date);
+      if(CLOUD) drain(); else setStatus('local'); $('#status').textContent='Restored '+n+' day'+(n===1?'':'s');
+    }catch(err){ setStatus('err'); $('#status').textContent='That file is not a Monkey Movers backup'; }
+  };
+  r.readAsText(f); e.target.value='';
+});
+
+start();
+})();
+</script>
+</body>
+</html>
